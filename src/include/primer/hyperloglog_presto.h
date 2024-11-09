@@ -83,6 +83,7 @@ class HyperLogLogPresto {
   uint64_t cardinality_;
 
   // TODO(student) - can add more data structures as required
+  int16_t leadingbits_;
 };
 
 }  // namespace bustub
