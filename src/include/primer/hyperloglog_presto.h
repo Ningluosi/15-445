@@ -19,6 +19,8 @@
 /** @brief Total bucket size. */
 #define TOTAL_BUCKET_SIZE (DENSE_BUCKET_SIZE + OVERFLOW_BUCKET_SIZE)
 
+#define BITSET_CAPACITY 64
+
 namespace bustub {
 
 template <typename KeyType>

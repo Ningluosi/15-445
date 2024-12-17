@@ -23,13 +23,12 @@ template <typename KeyType>
 auto HyperLogLogPresto<KeyType>::AddElem(KeyType val) -> void {
   /** @TODO(student) Implement this function! */
   hash_t hash_val = CalculateHash(val);
-
-  uint8_t zero_count = 0;
-  uint64_t temp_val = hash_val;
-  while (temp_val != 0) {
-    if ((temp_val & 0x1) == 0) {
+  std::bitset<BITSET_CAPACITY> bset(hash_val);
+  std::cout << bset << std::endl;
+  uint16_t zero_count = 0;
+  for (int i = 0; i < BITSET_CAPACITY-leadingbits_; i++) {
+    if (bset[i] == 0) {
       zero_count++;
-      temp_val = temp_val >> 1;
       continue;
     }
     break;
@@ -37,14 +36,14 @@ auto HyperLogLogPresto<KeyType>::AddElem(KeyType val) -> void {
 
   uint16_t index = 0;
   if (leadingbits_ != 0) {
-    index = hash_val >> (sizeof(hash_t) * 8 - leadingbits_);
+    index = hash_val >> (BITSET_CAPACITY - leadingbits_);
   }
 
   uint64_t raw_val = dense_bucket_[index].to_ulong();
   std::unordered_map<uint16_t, std::bitset<OVERFLOW_BUCKET_SIZE>>::iterator it = overflow_bucket_.find(index);
   if (it != overflow_bucket_.end()) {
     uint64_t overflow_val = it->second.to_ulong();
-    raw_val &= overflow_val;
+    raw_val = raw_val | (overflow_val << DENSE_BUCKET_SIZE);
   }
 
   if (zero_count > raw_val) {
@@ -52,8 +51,8 @@ auto HyperLogLogPresto<KeyType>::AddElem(KeyType val) -> void {
       dense_bucket_[index] = std::bitset<DENSE_BUCKET_SIZE> (zero_count);
     }
     else {
-      uint8_t lsb_val = zero_count & 0xF;
-      uint8_t msb_val = zero_count >> DENSE_BUCKET_SIZE;
+      uint16_t lsb_val = zero_count & 0xF;
+      uint16_t msb_val = zero_count >> DENSE_BUCKET_SIZE;
       dense_bucket_[index] = std::bitset<DENSE_BUCKET_SIZE> (lsb_val);
       overflow_bucket_[index] = std::bitset<OVERFLOW_BUCKET_SIZE>(msb_val);
     }
@@ -71,8 +70,8 @@ auto HyperLogLogPresto<T>::ComputeCardinality() -> void {
   for (size_t i = 0; i < m; i++) {
     lsb = dense_bucket_[i].to_ulong();
     if (overflow_bucket_.find(i) != overflow_bucket_.end()) {
-      msb = overflow_bucket_[i].to_ulong();
-      lsb &= msb;
+      msb = overflow_bucket_[i].to_ulong() << DENSE_BUCKET_SIZE;
+      lsb |= msb;
     }
     int exp = -lsb;
     sum += std::pow(2, exp);
