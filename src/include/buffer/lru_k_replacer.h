@@ -31,7 +31,7 @@ class LRUKNode {
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
 
-  [[maybe_unused]] std::list<size_t> history_;
+  std::list<size_t> history_;
   size_t k_;
   frame_id_t fid_;
   bool is_evictable_{false};
@@ -39,8 +39,12 @@ class LRUKNode {
   public:
    LRUKNode();
    explicit LRUKNode(size_t k, frame_id_t id);
-   void setNodeEvictable(bool evictable);
-   bool getNodeEvictable();
+   void SetNodeEvictable(bool evictable);
+   void SetNodeHistory(size_t seconds);
+   size_t GetFrameId() const;
+   bool GetNodeEvictable();
+   size_t GetFirstTimeStamp();
+   size_t GetHistorySize();
    ~LRUKNode() = default;
 };
 
@@ -155,6 +159,9 @@ class LRUKReplacer {
    */
   auto Size() -> size_t;
 
+  void AddNodeToList(std::unordered_map<frame_id_t, LRUKNode>::iterator &iter);
+  void DeleteNodeFromList(std::unordered_map<frame_id_t, LRUKNode>::iterator &iter);
+
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
@@ -164,6 +171,8 @@ class LRUKReplacer {
   size_t replacer_size_;
   size_t k_;
   [[maybe_unused]] std::mutex latch_;
+  std::list<LRUKNode> hot_list_;
+  std::list<LRUKNode> clod_list_;
 };
 
 }  // namespace bustub
