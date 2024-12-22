@@ -38,13 +38,15 @@ class LRUKNode {
 
   public:
    LRUKNode();
-   explicit LRUKNode(size_t k, frame_id_t id);
+   explicit LRUKNode(frame_id_t id);
    void SetNodeEvictable(bool evictable);
    void SetNodeHistory(size_t seconds);
+   void SetBackDistance();
    size_t GetFrameId() const;
    bool GetNodeEvictable();
    size_t GetFirstTimeStamp();
    size_t GetHistorySize();
+   size_t GetBackDistance();
    ~LRUKNode() = default;
 };
 

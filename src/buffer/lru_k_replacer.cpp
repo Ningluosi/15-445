@@ -17,7 +17,7 @@ namespace bustub {
 
 LRUKNode::LRUKNode() {}
 
-LRUKNode::LRUKNode(size_t k, frame_id_t id) : k_(k), fid_(id) {}
+LRUKNode::LRUKNode(frame_id_t id) : fid_(id) {}
 
 void LRUKNode::SetNodeHistory(size_t seconds) {
     history_.push_back(seconds);
@@ -43,6 +43,14 @@ size_t LRUKNode::GetFrameId() const{
     return fid_;
 }
 
+void LRUKNode::SetBackDistance() {
+    k_ = history_.back() - history_.front();
+}
+
+size_t LRUKNode::GetBackDistance() {
+    return k_;
+}
+
 LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {}
 
 auto LRUKReplacer::Evict() -> std::optional<frame_id_t> { return std::nullopt; }
@@ -56,7 +64,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
     auto epoch = std::chrono::system_clock::to_time_t(now);
 
     if (node_store_.find(frame_id) == node_store_.end()) {
-        LRUKNode node(k_, frame_id);
+        LRUKNode node(frame_id);
         node_store_[frame_id] = std::move(node);
         node_store_[frame_id].SetNodeHistory(epoch);
     }
@@ -64,6 +72,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
         node_store_[frame_id].SetNodeHistory(epoch);
     }
 }
+
 void LRUKReplacer::AddNodeToList(std::unordered_map<frame_id_t, LRUKNode>::iterator &iter) {
     if (iter->second.GetHistorySize() >= k_) {
         hot_list_.push_back(iter->second);
