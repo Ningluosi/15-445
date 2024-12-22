@@ -47,6 +47,7 @@ class LRUKNode {
    size_t GetFirstTimeStamp();
    size_t GetHistorySize();
    size_t GetBackwardDistance();
+   void ClearHistory();
    ~LRUKNode() = default;
 };
 

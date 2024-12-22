@@ -51,9 +51,37 @@ size_t LRUKNode::GetBackwardDistance() {
     return k_;
 }
 
+void LRUKNode::ClearHistory() {
+    history_.clear();
+}
+
 LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {}
 
-auto LRUKReplacer::Evict() -> std::optional<frame_id_t> { return std::nullopt; }
+auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
+    std::optional<frame_id_t> fid;
+    frame_id_t tmpId;
+
+    if (clod_list_.size() > 0) {
+        tmpId = clod_list_.front().GetFrameId();
+        fid = frame_id_t(tmpId);
+        node_store_.erase(tmpId);
+        clod_list_.front().ClearHistory();
+        clod_list_.pop_front();
+        curr_size_--;
+        return fid;
+    }
+    else if (hot_list_.size() > 0) {
+        tmpId = hot_list_.front().GetFrameId();
+        fid = frame_id_t(tmpId);
+        node_store_.erase(tmpId);
+        hot_list_.front().ClearHistory();
+        hot_list_.pop_front();
+        curr_size_--;
+        return fid;
+    }
+
+    return std::nullopt;
+}
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
     if ((size_t)frame_id > replacer_size_) {
