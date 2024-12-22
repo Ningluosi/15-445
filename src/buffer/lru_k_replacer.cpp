@@ -15,175 +15,136 @@
 
 namespace bustub {
 
-LRUKNode::LRUKNode() {}
-
 LRUKNode::LRUKNode(frame_id_t id) : fid_(id) {}
 
-void LRUKNode::SetAccessHistory(size_t seconds) {
-    history_.push_back(seconds);
-}
+void LRUKNode::SetAccessHistory(size_t seconds) { history_.push_back(seconds); }
 
-bool LRUKNode::GetNodeEvictable() {
-    return is_evictable_;
-}
+auto LRUKNode::GetNodeEvictable() -> bool { return is_evictable_; }
 
-void LRUKNode::SetNodeEvictable(bool evictable) {
-    is_evictable_ = evictable;
-}
+void LRUKNode::SetNodeEvictable(bool evictable) { is_evictable_ = evictable; }
 
-size_t LRUKNode::GetHistorySize() {
-    return history_.size();
-}
+auto LRUKNode::GetHistorySize() const -> size_t { return history_.size(); }
 
-size_t LRUKNode::GetFirstTimeStamp() {
-    return history_.front();
-}
+auto LRUKNode::GetFirstTimeStamp() const -> size_t { return history_.front(); }
 
-size_t LRUKNode::GetFrameId() const{
-    return fid_;
-}
+auto LRUKNode::GetFrameId() const -> size_t { return fid_; }
 
-void LRUKNode::SetBackwardDistance() {
-    k_ = history_.back() - history_.front();
-}
+void LRUKNode::SetBackwardDistance() { k_ = history_.back() - history_.front(); }
 
-size_t LRUKNode::GetBackwardDistance() {
-    return k_;
-}
+auto LRUKNode::GetBackwardDistance() const -> size_t { return k_; }
 
-void LRUKNode::ClearHistory() {
-    history_.clear();
-}
+void LRUKNode::ClearHistory() { history_.clear(); }
 
 LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {}
 
+auto LRUKReplacer::EvictFromList(std::list<LRUKNode> &node_list) -> std::optional<frame_id_t> {
+  LRUKNode &node = node_list.front();
+  frame_id_t fid = node.GetFrameId();
+  node_store_.erase(fid);
+  node.ClearHistory();
+  node_list.pop_front();
+  curr_size_--;
+  return fid;
+}
+
 auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
-    std::optional<frame_id_t> fid;
-    frame_id_t tmpId;
+  if (!cold_list_.empty()) {
+    return EvictFromList(cold_list_);
+  }
 
-    if (clod_list_.size() > 0) {
-        tmpId = clod_list_.front().GetFrameId();
-        fid = frame_id_t(tmpId);
-        node_store_.erase(tmpId);
-        clod_list_.front().ClearHistory();
-        clod_list_.pop_front();
-        curr_size_--;
-        return fid;
-    }
-    else if (hot_list_.size() > 0) {
-        tmpId = hot_list_.front().GetFrameId();
-        fid = frame_id_t(tmpId);
-        node_store_.erase(tmpId);
-        hot_list_.front().ClearHistory();
-        hot_list_.pop_front();
-        curr_size_--;
-        return fid;
-    }
+  if (!hot_list_.empty()) {
+    return EvictFromList(hot_list_);
+  }
 
-    return std::nullopt;
+  return std::nullopt;
 }
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
-    if ((size_t)frame_id > replacer_size_) {
-        throw Exception("frame id is invalid");
+  if (static_cast<size_t>(frame_id) > replacer_size_) {
+    throw Exception("frame id is invalid");
+  }
+
+  auto now = std::chrono::system_clock::now();
+  current_timestamp_ = std::chrono::system_clock::to_time_t(now);
+
+  if (node_store_.find(frame_id) == node_store_.end()) {
+    LRUKNode node(frame_id);
+    node_store_[frame_id] = node;
+    node_store_[frame_id].SetAccessHistory(current_timestamp_);
+  } else {
+    node_store_[frame_id].SetAccessHistory(current_timestamp_);
+
+    if (node_store_[frame_id].GetHistorySize() >= k_) {
+      node_store_[frame_id].SetBackwardDistance();
     }
 
-    auto now = std::chrono::system_clock::now();
-    current_timestamp_ = std::chrono::system_clock::to_time_t(now);
-
-    if (node_store_.find(frame_id) == node_store_.end()) {
-        LRUKNode node(frame_id);
-        node_store_[frame_id] = std::move(node);
-        node_store_[frame_id].SetAccessHistory(current_timestamp_);
-    }
-    else {
-        node_store_[frame_id].SetAccessHistory(current_timestamp_);
-
-        if (node_store_[frame_id].GetHistorySize() >= k_) {
-            node_store_[frame_id].SetBackwardDistance();
-        }
-
-        MoveNodeFromList(frame_id);
-    }
+    MoveNodeFromList(frame_id);
+  }
 }
 
 void LRUKReplacer::AddNodeToTail(frame_id_t fid) {
-    auto iter = node_store_.find(fid);
-    if (iter->second.GetHistorySize() >= k_) {
-        hot_list_.push_back(iter->second);
-    }
-    else {
-        clod_list_.push_back(iter->second);
-    }
+  auto iter = node_store_.find(fid);
+  if (iter->second.GetHistorySize() >= k_) {
+    hot_list_.push_back(iter->second);
+  } else {
+    cold_list_.push_back(iter->second);
+  }
 }
 
 void LRUKReplacer::DeleteNodeFromList(frame_id_t fid) {
-    auto iter = node_store_.find(fid);
-    if (iter->second.GetHistorySize() >= k_) {
-        hot_list_.remove_if([&iter](const LRUKNode &n) {
-            return iter->second.GetFrameId() == n.GetFrameId();
-        });
-    }
-    else {
-        clod_list_.remove_if([&iter](const LRUKNode &n) {
-            return iter->second.GetFrameId() == n.GetFrameId();
-        });
-    }    
+  auto iter = node_store_.find(fid);
+  if (iter->second.GetHistorySize() >= k_) {
+    hot_list_.remove_if([&iter](const LRUKNode &n) { return iter->second.GetFrameId() == n.GetFrameId(); });
+  } else {
+    cold_list_.remove_if([&iter](const LRUKNode &n) { return iter->second.GetFrameId() == n.GetFrameId(); });
+  }
 }
 
-bool LRUKReplacer::CompareDesc(LRUKNode &a, LRUKNode &b) {
-    return a.GetBackwardDistance() > b.GetBackwardDistance();
+auto LRUKReplacer::CompareDesc(LRUKNode &a, LRUKNode &b) -> bool {
+  return a.GetBackwardDistance() > b.GetBackwardDistance();
 }
 
 void LRUKReplacer::MoveNodeFromList(frame_id_t fid) {
-    auto iter = node_store_.find(fid);
+  auto iter = node_store_.find(fid);
 
-    if (!iter->second.GetNodeEvictable()) {
-        return;
+  if (!iter->second.GetNodeEvictable()) {
+    return;
+  }
+
+  if (iter->second.GetHistorySize() >= k_) {
+    if (iter->second.GetHistorySize() == k_) {
+      cold_list_.remove_if([&iter](const LRUKNode &n) { return iter->second.GetFrameId() == n.GetFrameId(); });
+
+      AddNodeToTail(fid);
     }
 
-    if (iter->second.GetHistorySize() >= k_) {
-        if (iter->second.GetHistorySize() == k_) {
-            clod_list_.remove_if([&iter](const LRUKNode &n) {
-                return iter->second.GetFrameId() == n.GetFrameId();
-            });
+    hot_list_.sort(CompareDesc);
+  } else {
+    DeleteNodeFromList(fid);
 
-            AddNodeToTail(fid);
-        }
-
-        hot_list_.sort(CompareDesc);
-    }
-    else {
-        DeleteNodeFromList(fid);
-    
-        AddNodeToTail(fid);
-    }
+    AddNodeToTail(fid);
+  }
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
-    auto iter = node_store_.find(frame_id);
-    if (iter != node_store_.end())
-    {
-        bool previous_evictable = iter->second.GetNodeEvictable();
-        iter->second.SetNodeEvictable(set_evictable);
-        if (set_evictable && !previous_evictable) {
-            curr_size_++;
-            AddNodeToTail(frame_id);
-        }
-        else if (!set_evictable && previous_evictable) {
-            curr_size_--;
-            DeleteNodeFromList(frame_id);
-        }
+  auto iter = node_store_.find(frame_id);
+  if (iter != node_store_.end()) {
+    bool previous_evictable = iter->second.GetNodeEvictable();
+    iter->second.SetNodeEvictable(set_evictable);
+    if (set_evictable && !previous_evictable) {
+      curr_size_++;
+      AddNodeToTail(frame_id);
+    } else if (!set_evictable && previous_evictable) {
+      curr_size_--;
+      DeleteNodeFromList(frame_id);
     }
-    else {
-        throw Exception("frame id is invalid");
-    }
+  } else {
+    throw Exception("frame id is invalid");
+  }
 }
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {}
 
-auto LRUKReplacer::Size() -> size_t {
-    return curr_size_; 
-}
+auto LRUKReplacer::Size() -> size_t { return curr_size_; }
 
 }  // namespace bustub

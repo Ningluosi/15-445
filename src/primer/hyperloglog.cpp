@@ -3,19 +3,16 @@
 namespace bustub {
 
 template <typename KeyType>
-HyperLogLog<KeyType>::HyperLogLog(int16_t n_bits) : cardinality_(0), bits_(n_bits){
-  try
-  {
-    if (n_bits <=0 || n_bits >= BITSET_CAPACITY) {
-        throw std::invalid_argument("n_bits not in range");
+HyperLogLog<KeyType>::HyperLogLog(int16_t n_bits) : cardinality_(0), bits_(n_bits) {
+  try {
+    if (n_bits <= 0 || n_bits >= BITSET_CAPACITY) {
+      throw std::invalid_argument("n_bits not in range");
     }
-  }
-  catch(const std::invalid_argument& e)
-  {
+  } catch (const std::invalid_argument &e) {
     std::cerr << e.what() << '\n';
     bits_ = 0;
   }
-  
+
   registers_.resize(std::pow(2, n_bits));
 }
 
@@ -30,10 +27,8 @@ template <typename KeyType>
 auto HyperLogLog<KeyType>::PositionOfLeftmostOne(const std::bitset<BITSET_CAPACITY> &bset) const -> uint64_t {
   /** @TODO(student) Implement this function! */
   uint64_t begin = BITSET_CAPACITY - 1 - bits_;
-  for (uint64_t i = begin; i > 0; i--)
-  {
-    if (bset[i] == 1)
-    {
+  for (uint64_t i = begin; i > 0; i--) {
+    if (bset[i] == 1) {
       return begin - i + 1;
     }
   }
@@ -63,8 +58,7 @@ auto HyperLogLog<KeyType>::ComputeCardinality() -> void {
   double sum = 0;
   size_t m = registers_.capacity();
 
-  for (auto &value : registers_)
-  {
+  for (auto &value : registers_) {
     int exp = -value;
     sum += std::pow(2, exp);
   }

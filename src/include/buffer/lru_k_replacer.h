@@ -36,19 +36,19 @@ class LRUKNode {
   frame_id_t fid_;
   bool is_evictable_{false};
 
-  public:
-   LRUKNode();
-   explicit LRUKNode(frame_id_t id);
-   void SetNodeEvictable(bool evictable);
-   void SetAccessHistory(size_t seconds);
-   void SetBackwardDistance();
-   size_t GetFrameId() const;
-   bool GetNodeEvictable();
-   size_t GetFirstTimeStamp();
-   size_t GetHistorySize();
-   size_t GetBackwardDistance();
-   void ClearHistory();
-   ~LRUKNode() = default;
+ public:
+  LRUKNode() = default;
+  ~LRUKNode() = default;
+  explicit LRUKNode(frame_id_t id);
+  void SetNodeEvictable(bool evictable);
+  void SetAccessHistory(size_t seconds);
+  void SetBackwardDistance();
+  auto GetFrameId() const -> size_t;
+  auto GetNodeEvictable() -> bool;
+  auto GetFirstTimeStamp() const -> size_t;
+  auto GetHistorySize() const -> size_t;
+  auto GetBackwardDistance() const -> size_t;
+  void ClearHistory();
 };
 
 /**
@@ -164,8 +164,9 @@ class LRUKReplacer {
 
   void AddNodeToTail(frame_id_t fid);
   void DeleteNodeFromList(frame_id_t fid);
-  static bool CompareDesc(LRUKNode &a, LRUKNode &b);
+  static auto CompareDesc(LRUKNode &a, LRUKNode &b) -> bool;
   void MoveNodeFromList(frame_id_t fid);
+  auto EvictFromList(std::list<LRUKNode> &node_list) -> std::optional<frame_id_t>;
 
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
@@ -177,7 +178,7 @@ class LRUKReplacer {
   size_t k_;
   [[maybe_unused]] std::mutex latch_;
   std::list<LRUKNode> hot_list_;
-  std::list<LRUKNode> clod_list_;
+  std::list<LRUKNode> cold_list_;
 };
 
 }  // namespace bustub

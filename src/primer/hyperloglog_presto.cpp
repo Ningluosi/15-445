@@ -4,14 +4,11 @@ namespace bustub {
 
 template <typename KeyType>
 HyperLogLogPresto<KeyType>::HyperLogLogPresto(int16_t n_leading_bits) : cardinality_(0), leadingbits_(n_leading_bits) {
-  try
-  {
-    if (n_leading_bits <=0 || n_leading_bits >= 64) {
-        throw std::invalid_argument("n_leading_bits not in range");
+  try {
+    if (n_leading_bits <= 0 || n_leading_bits >= 64) {
+      throw std::invalid_argument("n_leading_bits not in range");
     }
-  }
-  catch(const std::invalid_argument& e)
-  {
+  } catch (const std::invalid_argument &e) {
     std::cerr << e.what() << '\n';
     leadingbits_ = 0;
   }
@@ -26,7 +23,7 @@ auto HyperLogLogPresto<KeyType>::AddElem(KeyType val) -> void {
   std::bitset<BITSET_CAPACITY> bset(hash_val);
   std::cout << bset << std::endl;
   uint16_t zero_count = 0;
-  for (int i = 0; i < BITSET_CAPACITY-leadingbits_; i++) {
+  for (int i = 0; i < BITSET_CAPACITY - leadingbits_; i++) {
     if (bset[i] == 0) {
       zero_count++;
       continue;
@@ -48,12 +45,11 @@ auto HyperLogLogPresto<KeyType>::AddElem(KeyType val) -> void {
 
   if (zero_count > raw_val) {
     if (zero_count <= 0xF) {
-      dense_bucket_[index] = std::bitset<DENSE_BUCKET_SIZE> (zero_count);
-    }
-    else {
+      dense_bucket_[index] = std::bitset<DENSE_BUCKET_SIZE>(zero_count);
+    } else {
       uint16_t lsb_val = zero_count & 0xF;
       uint16_t msb_val = zero_count >> DENSE_BUCKET_SIZE;
-      dense_bucket_[index] = std::bitset<DENSE_BUCKET_SIZE> (lsb_val);
+      dense_bucket_[index] = std::bitset<DENSE_BUCKET_SIZE>(lsb_val);
       overflow_bucket_[index] = std::bitset<OVERFLOW_BUCKET_SIZE>(msb_val);
     }
   }
