@@ -40,13 +40,13 @@ class LRUKNode {
    LRUKNode();
    explicit LRUKNode(frame_id_t id);
    void SetNodeEvictable(bool evictable);
-   void SetNodeHistory(size_t seconds);
-   void SetBackDistance();
+   void SetAccessHistory(size_t seconds);
+   void SetBackwardDistance();
    size_t GetFrameId() const;
    bool GetNodeEvictable();
    size_t GetFirstTimeStamp();
    size_t GetHistorySize();
-   size_t GetBackDistance();
+   size_t GetBackwardDistance();
    ~LRUKNode() = default;
 };
 
@@ -161,14 +161,16 @@ class LRUKReplacer {
    */
   auto Size() -> size_t;
 
-  void AddNodeToList(std::unordered_map<frame_id_t, LRUKNode>::iterator &iter);
-  void DeleteNodeFromList(std::unordered_map<frame_id_t, LRUKNode>::iterator &iter);
+  void AddNodeToTail(frame_id_t fid);
+  void DeleteNodeFromList(frame_id_t fid);
+  static bool CompareDesc(LRUKNode &a, LRUKNode &b);
+  void MoveNodeFromList(frame_id_t fid);
 
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
   std::unordered_map<frame_id_t, LRUKNode> node_store_;
-  [[maybe_unused]] size_t current_timestamp_{0};
+  size_t current_timestamp_{0};
   size_t curr_size_{0};
   size_t replacer_size_;
   size_t k_;

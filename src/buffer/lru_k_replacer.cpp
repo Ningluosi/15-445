@@ -19,7 +19,7 @@ LRUKNode::LRUKNode() {}
 
 LRUKNode::LRUKNode(frame_id_t id) : fid_(id) {}
 
-void LRUKNode::SetNodeHistory(size_t seconds) {
+void LRUKNode::SetAccessHistory(size_t seconds) {
     history_.push_back(seconds);
 }
 
@@ -43,11 +43,11 @@ size_t LRUKNode::GetFrameId() const{
     return fid_;
 }
 
-void LRUKNode::SetBackDistance() {
+void LRUKNode::SetBackwardDistance() {
     k_ = history_.back() - history_.front();
 }
 
-size_t LRUKNode::GetBackDistance() {
+size_t LRUKNode::GetBackwardDistance() {
     return k_;
 }
 
@@ -61,19 +61,26 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
     }
 
     auto now = std::chrono::system_clock::now();
-    auto epoch = std::chrono::system_clock::to_time_t(now);
+    current_timestamp_ = std::chrono::system_clock::to_time_t(now);
 
     if (node_store_.find(frame_id) == node_store_.end()) {
         LRUKNode node(frame_id);
         node_store_[frame_id] = std::move(node);
-        node_store_[frame_id].SetNodeHistory(epoch);
+        node_store_[frame_id].SetAccessHistory(current_timestamp_);
     }
     else {
-        node_store_[frame_id].SetNodeHistory(epoch);
+        node_store_[frame_id].SetAccessHistory(current_timestamp_);
+
+        if (node_store_[frame_id].GetHistorySize() >= k_) {
+            node_store_[frame_id].SetBackwardDistance();
+        }
+
+        MoveNodeFromList(frame_id);
     }
 }
 
-void LRUKReplacer::AddNodeToList(std::unordered_map<frame_id_t, LRUKNode>::iterator &iter) {
+void LRUKReplacer::AddNodeToTail(frame_id_t fid) {
+    auto iter = node_store_.find(fid);
     if (iter->second.GetHistorySize() >= k_) {
         hot_list_.push_back(iter->second);
     }
@@ -82,7 +89,8 @@ void LRUKReplacer::AddNodeToList(std::unordered_map<frame_id_t, LRUKNode>::itera
     }
 }
 
-void LRUKReplacer::DeleteNodeFromList(std::unordered_map<frame_id_t, LRUKNode>::iterator &iter) {
+void LRUKReplacer::DeleteNodeFromList(frame_id_t fid) {
+    auto iter = node_store_.find(fid);
     if (iter->second.GetHistorySize() >= k_) {
         hot_list_.remove_if([&iter](const LRUKNode &n) {
             return iter->second.GetFrameId() == n.GetFrameId();
@@ -95,6 +103,35 @@ void LRUKReplacer::DeleteNodeFromList(std::unordered_map<frame_id_t, LRUKNode>::
     }    
 }
 
+bool LRUKReplacer::CompareDesc(LRUKNode &a, LRUKNode &b) {
+    return a.GetBackwardDistance() > b.GetBackwardDistance();
+}
+
+void LRUKReplacer::MoveNodeFromList(frame_id_t fid) {
+    auto iter = node_store_.find(fid);
+
+    if (!iter->second.GetNodeEvictable()) {
+        return;
+    }
+
+    if (iter->second.GetHistorySize() >= k_) {
+        if (iter->second.GetHistorySize() == k_) {
+            clod_list_.remove_if([&iter](const LRUKNode &n) {
+                return iter->second.GetFrameId() == n.GetFrameId();
+            });
+
+            AddNodeToTail(fid);
+        }
+
+        hot_list_.sort(CompareDesc);
+    }
+    else {
+        DeleteNodeFromList(fid);
+    
+        AddNodeToTail(fid);
+    }
+}
+
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     auto iter = node_store_.find(frame_id);
     if (iter != node_store_.end())
@@ -103,11 +140,11 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
         iter->second.SetNodeEvictable(set_evictable);
         if (set_evictable && !previous_evictable) {
             curr_size_++;
-            AddNodeToList(iter);
+            AddNodeToTail(frame_id);
         }
         else if (!set_evictable && previous_evictable) {
             curr_size_--;
-            DeleteNodeFromList(iter);
+            DeleteNodeFromList(frame_id);
         }
     }
     else {
