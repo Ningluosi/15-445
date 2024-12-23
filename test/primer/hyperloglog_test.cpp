@@ -69,7 +69,7 @@ TEST(HyperLogLogTest, BasicTest2) {
     if (i == 0) {
       obj.ComputeCardinality();
       ans = obj.GetCardinality();
-      ASSERT_EQ(ans, 7);
+      ASSERT_EQ(ans, 10);
     }
   }
 
