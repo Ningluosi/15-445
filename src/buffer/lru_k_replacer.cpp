@@ -138,8 +138,6 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
       curr_size_--;
       DeleteNodeFromList(frame_id);
     }
-  } else {
-    throw Exception("frame id is invalid");
   }
 }
 
