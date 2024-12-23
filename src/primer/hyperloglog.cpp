@@ -28,7 +28,7 @@ auto HyperLogLog<KeyType>::PositionOfLeftmostOne(const std::bitset<BITSET_CAPACI
   /** @TODO(student) Implement this function! */
   uint64_t begin = BITSET_CAPACITY - 1 - bits_;
   for (uint64_t i = begin; i > 0; i--) {
-    if (bset[i] == 1) {
+    if (static_cast<int>(bset[i]) == 1) {
       return begin - i + 1;
     }
   }

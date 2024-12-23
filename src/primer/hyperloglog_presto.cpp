@@ -24,7 +24,7 @@ auto HyperLogLogPresto<KeyType>::AddElem(KeyType val) -> void {
   std::cout << bset << std::endl;
   uint16_t zero_count = 0;
   for (int i = 0; i < BITSET_CAPACITY - leadingbits_; i++) {
-    if (bset[i] == 0) {
+    if (static_cast<int>(bset[i]) == 0) {
       zero_count++;
       continue;
     }
@@ -37,7 +37,7 @@ auto HyperLogLogPresto<KeyType>::AddElem(KeyType val) -> void {
   }
 
   uint64_t raw_val = dense_bucket_[index].to_ulong();
-  std::unordered_map<uint16_t, std::bitset<OVERFLOW_BUCKET_SIZE>>::iterator it = overflow_bucket_.find(index);
+  auto it = overflow_bucket_.find(index);
   if (it != overflow_bucket_.end()) {
     uint64_t overflow_val = it->second.to_ulong();
     raw_val = raw_val | (overflow_val << DENSE_BUCKET_SIZE);
