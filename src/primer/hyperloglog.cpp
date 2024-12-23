@@ -11,6 +11,7 @@ HyperLogLog<KeyType>::HyperLogLog(int16_t n_bits) : cardinality_(0), bits_(n_bit
   } catch (const std::invalid_argument &e) {
     std::cerr << e.what() << '\n';
     bits_ = 0;
+    n_bits = 0;
   }
 
   registers_.resize(std::pow(2, n_bits));
@@ -62,6 +63,8 @@ auto HyperLogLog<KeyType>::ComputeCardinality() -> void {
     int exp = -value;
     sum += std::pow(2, exp);
   }
+  std::cout << "m: " << m << std::endl;
+  std::cout << "sum: " << sum << std::endl;
   cardinality_ = std::floor((HyperLogLog<KeyType>::CONSTANT * m * m) / sum);
 }
 
