@@ -50,7 +50,7 @@ auto HyperLogLog<KeyType>::AddElem(KeyType val) -> void {
     index = bset.to_ulong() >> (BITSET_CAPACITY - bits_);
   }
 
-  registers_[index] = std::max(registers_[index], p);
+  registers_[index] = registers_[index] > p ? registers_[index] : p;
 }
 
 template <typename KeyType>
