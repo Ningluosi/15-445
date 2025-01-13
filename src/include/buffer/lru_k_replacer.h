@@ -176,7 +176,7 @@ class LRUKReplacer {
   size_t curr_size_{0};
   size_t replacer_size_;
   size_t k_;
-  [[maybe_unused]] std::mutex latch_;
+  std::mutex latch_;
   std::list<LRUKNode> hot_list_;
   std::list<LRUKNode> cold_list_;
 };
