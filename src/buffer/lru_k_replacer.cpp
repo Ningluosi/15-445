@@ -48,15 +48,16 @@ auto LRUKReplacer::EvictFromList(std::list<LRUKNode> &node_list) -> std::optiona
 }
 
 auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
+  std::scoped_lock slk(latch_);
+
+  std::optional<frame_id_t> result;
   if (!cold_list_.empty()) {
-    return EvictFromList(cold_list_);
+    result = EvictFromList(cold_list_);
+  } else if (!hot_list_.empty()) {
+    result = EvictFromList(hot_list_);
   }
 
-  if (!hot_list_.empty()) {
-    return EvictFromList(hot_list_);
-  }
-
-  return std::nullopt;
+  return result;
 }
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
@@ -64,6 +65,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
     throw Exception("frame id is invalid");
   }
 
+  std::scoped_lock slk(latch_);
   auto now = std::chrono::system_clock::now();
   current_timestamp_ = std::chrono::system_clock::to_time_t(now);
 
@@ -127,6 +129,7 @@ void LRUKReplacer::MoveNodeFromList(frame_id_t fid) {
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
+  std::scoped_lock slk(latch_);
   auto iter = node_store_.find(frame_id);
   if (iter != node_store_.end()) {
     bool previous_evictable = iter->second.GetNodeEvictable();
