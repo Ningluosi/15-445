@@ -151,11 +151,10 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
     if (!iter->second.GetNodeEvictable()) {
       throw Exception("frame is not evictable");
     }
-    else {
-      DeleteNodeFromList(frame_id);
-      node_store_.erase(frame_id);
-      curr_size_--;
-    }
+
+    DeleteNodeFromList(frame_id);
+    node_store_.erase(frame_id);
+    curr_size_--;
   }
 }
 
