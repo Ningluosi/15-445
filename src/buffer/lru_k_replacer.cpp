@@ -144,7 +144,20 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
   }
 }
 
-void LRUKReplacer::Remove(frame_id_t frame_id) {}
+void LRUKReplacer::Remove(frame_id_t frame_id) {
+  std::scoped_lock slk(latch_);
+  auto iter = node_store_.find(frame_id);
+  if (iter != node_store_.end()) {
+    if (!iter->second.GetNodeEvictable()) {
+      throw Exception("frame is not evictable");
+    }
+    else {
+      DeleteNodeFromList(frame_id);
+      node_store_.erase(frame_id);
+      curr_size_--;
+    }
+  }
+}
 
 auto LRUKReplacer::Size() -> size_t { return curr_size_; }
 
